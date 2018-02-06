@@ -28,10 +28,12 @@ rm -f /backup.sh
 cat <<EOF >> /backup.sh
 #!/bin/bash
 
+PATH=/root/.local/bin:$PATH
+
 if [ -n ${AZ_USER} ]; then
     az account clear
-    az login --service-principal -u \${AZ_USER} -p "\${AZ_SECRET}" --tenant \${AZ_AD_TENANT_ID}
-    az storage directory create -n \${AZ_STORAGE_FOLDER} --share-name \${AZ_STORAGE_SHARE} --connection-string "\${AZ_STORAGE_CS}"
+    az login --service-principal -u "${AZ_USER}" -p "${AZ_SECRET}" --tenant ${AZ_AD_TENANT_ID}
+    az storage directory create -n ${AZ_STORAGE_FOLDER} --share-name ${AZ_STORAGE_SHARE} --connection-string "${AZ_STORAGE_CS}"
 fi
 
 MAX_BACKUPS=${MAX_BACKUPS}
@@ -41,20 +43,21 @@ echo "=> Backup started"
 if ${BACKUP_CMD} ;then
     echo "   Backup succeeded"
     if [ -n ${AZ_USER} ]; then
-        az storage file upload -s ${AZ_STORAGE_SHARE}/${AZ_STORAGE_FOLDER} --source /backup/\${BACKUP_NAME} --connection-string "\${AZ_STORAGE_CS}"
+        az storage file upload -s ${AZ_STORAGE_SHARE}/${AZ_STORAGE_FOLDER} --source /backup/\${BACKUP_NAME} --connection-string "${AZ_STORAGE_CS}"
+        echo "Uploaded to Azure"
     fi
 else
     echo "   Backup failed"
     rm -rf /backup/\${BACKUP_NAME}
 fi
-if [ -n "\${MAX_BACKUPS}" ]; then
-    while [ \$(ls /backup -N1 | wc -l) -gt \${MAX_BACKUPS} ];
+if [ -n "${MAX_BACKUPS}" ]; then
+    while [ \$(ls /backup -N1 | wc -l) -gt ${MAX_BACKUPS} ];
     do
         BACKUP_TO_BE_DELETED=\$(ls /backup -N1 | sort | head -n 1)
         echo "   Deleting backup \${BACKUP_TO_BE_DELETED}"
         rm -rf /backup/\${BACKUP_TO_BE_DELETED}
         if [ -n ${AZ_USER} ]; then
-            az storage file delete -s \${AZ_STORAGE_SHARE} -p \${AZ_STORAGE_FOLDER}/\${BACKUP_TO_BE_DELETED} --connection-string "\${AZ_STORAGE_CS}"
+            az storage file delete -s ${AZ_STORAGE_SHARE} -p ${AZ_STORAGE_FOLDER}/\${BACKUP_TO_BE_DELETED} --connection-string "${AZ_STORAGE_CS}"
         fi
     done
 fi
